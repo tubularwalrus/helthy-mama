@@ -40,6 +40,7 @@ function migrate(s) {
   s.stats.perfect ??= 0;
   s.stats.bestPlank ??= 0;
   s.settings ??= { sound: true };
+  s.settings.sets ??= 3;
   s.active ??= null;
   return s;
 }

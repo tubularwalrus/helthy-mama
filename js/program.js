@@ -28,6 +28,11 @@ export function nextTemplateId(state, offset = 0) {
   return rot[(state.rotation + offset) % rot.length];
 }
 
+/** Sets per exercise: her chosen default (2 or 3), never more than the exercise's own count. */
+export function defaultSets(state, ex) {
+  return Math.min(ex.sets, state.settings?.sets ?? ex.sets);
+}
+
 // ── Build a concrete workout from a template ──────────────────────
 export function buildWorkout(state, templateId) {
   const t = TEMPLATES[templateId];
@@ -38,7 +43,7 @@ export function buildWorkout(state, templateId) {
     return {
       id,
       kind: ex.kind,
-      sets: ex.sets,
+      sets: defaultSets(state, ex),
       target: st.target,
       weight: st.weight,
       rest: ex.rest,

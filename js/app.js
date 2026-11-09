@@ -3,7 +3,7 @@ import { EXERCISES, TEMPLATES, LENGTHS } from './exercises.js';
 import { createFigure } from './figure.js';
 import { load, save, fresh, clear, exportJSON, importJSON } from './store.js';
 import {
-  exState, buildWorkout, estimateMinutes, nextTemplateId, weekPlan, sessionsInWeek,
+  exState, defaultSets, buildWorkout, estimateMinutes, nextTemplateId, weekPlan, sessionsInWeek,
   weekStreak, progress, progressFinisher, volumeOf,
 } from './program.js';
 import { medalList, checkMedals } from './medals.js';
@@ -297,7 +297,7 @@ function openExercise(id) {
   const st = S.ex[id];
   let mine = '';
   if (st && ex.kind !== 'interval') {
-    const it = { id, sets: ex.sets, target: st.target, weight: st.weight };
+    const it = { id, sets: defaultSets(S, ex), target: st.target, weight: st.weight };
     mine = `<div class="mine"><div><small>Your next goal</small><b>${prescription(it)}</b></div>
       ${st.best ? `<div><small>Best</small><b>${ex.kind === 'weight' ? `${fmtWeight(st.best.w)} lb × ${st.best.r}` : ex.kind === 'time' ? `${st.best.r}s` : `${st.best.r} reps`}</b></div>` : ''}</div>`;
     if (st.history.length) {
@@ -402,7 +402,10 @@ function renderSetView(it) {
       <button class="link-btn" data-act="exercise" data-id="${it.id}">How to</button>
     </div>
     <p class="muted wk-mus">${ex.muscles.join(' · ')}${ex.eachSide ? ' · each side' : ''}</p>
-    <div class="set-line"><span class="set-n">Set ${Math.min(n, it.sets)} of ${it.sets}</span><span class="goal">Goal: ${goalText(it)}</span></div>
+    <div class="set-line"><span class="set-n">Set ${Math.min(n, it.sets)} of
+      <span class="sets-tog" role="group" aria-label="Number of sets">${[2, 3].map((k) =>
+        `<button class="${it.sets === k ? 'on' : ''}" data-act="sets" data-n="${k}" aria-pressed="${it.sets === k}">${k}</button>`).join('')}</span></span>
+      <span class="goal">Goal: ${goalText(it)}</span></div>
     <div class="steppers ${weightStep ? '' : 'one'}">${weightStep}${holdTimer ? '' : repStep}</div>
     ${action}
     <div class="logged">${Array.from({ length: it.sets }, (_, i) => {
@@ -471,6 +474,23 @@ function logSet(repsOverride) {
   render();
 }
 
+// She chose to stop this exercise after the sets she's done (e.g. 2 of 3).
+function finishExerciseEarly() {
+  const a = S.active, it = curItem();
+  if (!it || !it.logged.length) return;
+  const i = a.idx;
+  it.sets = it.logged.length;
+  it.done = true;
+  a.idx++;
+  a.draft = null;
+  const nx = curItem() || (!a.finisher.done ? a.finisher : null);
+  const label = nx ? `Next: ${EXERCISES[nx.id].name}` : 'Almost done!';
+  if (a.timer?.type === 'rest') { a.timer.feelFor = i; a.timer.label = label; }
+  else if (curItem() || !a.finisher.done) startRest(it.rest, label, i);
+  persist();
+  render();
+}
+
 function startRest(sec, label, feelFor) {
   S.active.timer = { type: 'rest', endsAt: Date.now() + sec * 1000, total: sec, label, feelFor };
 }
@@ -499,6 +519,8 @@ function renderTimer() {
         <button class="btn glass" data-act="rest-add" data-v="15">+15s</button>
       </div>
       ${feel}
+      ${fi == null && nextIt && nextIt.logged.length >= 2 && nextIt.logged.length < nextIt.sets
+        ? `<button class="btn glass done-early" data-act="done-early">${icon.check} Done after ${nextIt.logged.length} sets — next exercise</button>` : ''}
       ${nextIt && fi != null ? `<div class="rest-next"><div class="fig thumb" data-fig="${nextIt.id}"></div><div><small>Up next</small><b>${EXERCISES[nextIt.id].name}</b><span>${prescription(nextIt)}</span></div></div>` : `<p class="rest-label">${esc(t.label)}</p>`}
     </div>`;
   hydrate($overlay);
@@ -736,7 +758,7 @@ function renderProgress() {
       const gain = ex.kind === 'weight' ? last.w - first.w : Math.max(...last.reps) - Math.max(...first.reps);
       return `<button class="str-row" data-act="exercise" data-id="${id}">
         <div class="fig thumb" data-fig="${id}" data-still></div>
-        <div><b>${ex.name}</b><span>${prescription({ id, sets: ex.sets, target: st.target, weight: st.weight })}</span></div>
+        <div><b>${ex.name}</b><span>${prescription({ id, sets: defaultSets(S, ex), target: st.target, weight: st.weight })}</span></div>
         ${spark(st.history.map((h) => (ex.kind === 'weight' ? h.w : Math.max(...h.reps))))}
         ${gain > 0 ? `<em class="gain">+${fmtWeight(gain)}${ex.kind === 'weight' ? ' lb' : ex.kind === 'time' ? 's' : ''}</em>` : ''}
       </button>`;
@@ -840,7 +862,7 @@ function openWeigh() {
 // ── Settings ───────────────────────────────────────────────────────
 function openSettings() {
   const p = S.profile;
-  ui.edit = { days: [...p.days], length: p.length };
+  ui.edit = { days: [...p.days], length: p.length, sets: S.settings.sets };
   openSheet(settingsHTML());
 }
 
@@ -853,6 +875,9 @@ function settingsHTML() {
       `<button class="day-tog ${e.days.includes(d) ? 'on' : ''}" data-act="s-day" data-d="${d}">${DAY_NAMES[d]}</button>`).join('')}</div></div>
     <div class="field"><span>Workout length</span><div class="len-pick sm">${[30, 45, 60].map((m) =>
       `<button class="len-opt ${e.length === m ? 'on' : ''}" data-act="s-len" data-m="${m}"><b>${m}</b><span>min</span></button>`).join('')}</div></div>
+    <div class="field"><span>Sets per exercise</span><div class="len-pick sm two">${[2, 3].map((k) =>
+      `<button class="len-opt ${e.sets === k ? 'on' : ''}" data-act="s-sets" data-k="${k}"><b>${k}</b><span>sets</span></button>`).join('')}</div>
+      <p class="muted small hint">Your default. You can switch between 2 and 3 for any exercise during a workout.</p></div>
     <label class="field"><span>Starting weight</span><div class="suffix"><input id="s-start" class="input" type="number" inputmode="decimal" value="${p.startWeight || ''}"><em>lb</em></div></label>
     <label class="field"><span>Goal weight</span><div class="suffix"><input id="s-goal" class="input" type="number" inputmode="decimal" value="${p.goalWeight || ''}"><em>lb</em></div></label>
     <label class="toggle"><input id="s-sound" type="checkbox" ${S.settings.sound ? 'checked' : ''}><span>Sounds</span></label>
@@ -1040,6 +1065,14 @@ const actions = {
     const t = S.active.timer; if (!t) return;
     t.endsAt += +v * 1000; t.total = Math.max(1, t.total + +v); persist(); tick();
   },
+  sets: ({ n }) => {
+    const a = S.active, it = curItem(); n = +n;
+    if (!it || it.sets === n || a.timer?.type === 'hold') return;
+    it.sets = n;
+    if (it.logged.length >= n) return finishExerciseEarly();
+    persist(); render();
+  },
+  'done-early': () => finishExerciseEarly(),
   'rest-skip': () => { S.active.timer = null; persist(); render(); },
   feel: ({ k }) => {
     const t = S.active.timer; if (!t || t.feelFor == null) return;
@@ -1068,12 +1101,14 @@ const actions = {
     refreshSheet(settingsHTML());
   },
   's-len': ({ m }) => { ui.edit.length = +m; refreshSheet(settingsHTML()); },
+  's-sets': ({ k }) => { ui.edit.sets = +k; refreshSheet(settingsHTML()); },
   's-save': () => {
     const p = S.profile;
     p.name = document.getElementById('s-name').value.trim() || p.name;
     if (ui.edit.days.length !== p.days.length) S.rotation = 0; // new split → start it fresh
     p.days = ui.edit.days.sort();
     p.length = ui.edit.length;
+    S.settings.sets = ui.edit.sets;
     const sw = parseFloat(document.getElementById('s-start').value);
     const gw = parseFloat(document.getElementById('s-goal').value);
     p.startWeight = sw > 0 ? sw : null;
@@ -1105,6 +1140,12 @@ if (S?.active) keepAwake(true);
 render();
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  // When a new version is deployed, reload once so she sees it right away
+  // (but never in the middle of a workout).
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !S?.active && !window.__reloaded) { window.__reloaded = true; location.reload(); }
+  });
   navigator.serviceWorker.register('./sw.js').catch(() => {});
 }
 

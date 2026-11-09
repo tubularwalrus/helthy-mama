@@ -459,3 +459,13 @@ body[data-mode="workout"] #view, body[data-mode="summary"] #view, body[data-mode
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Sets toggle (2 | 3) */
+.set-n { display: inline-flex; align-items: center; gap: 8px; }
+.sets-tog { display: inline-flex; background: var(--bg-2); border-radius: 12px; padding: 3px; }
+.sets-tog button { min-width: 36px; height: 32px; border-radius: 9px; font-weight: 800; font-size: 16px; color: var(--ink-2); }
+.sets-tog button.on { background: var(--card); color: var(--accent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+.done-early { width: 100%; margin-top: 16px; padding: 13px; }
+.done-early svg { fill: none; stroke: #fff; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.len-pick.two { grid-template-columns: repeat(2, 1fr); }
+.field .hint { margin-top: 6px; }
