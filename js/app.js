@@ -7,6 +7,7 @@ import {
   weekStreak, progress, progressFinisher, volumeOf,
 } from './program.js';
 import { medalList, checkMedals } from './medals.js';
+import { SONGS, songKey, songUrl, songOfDay, shuffleSong, VAVO_URL } from './songs.js';
 import { confetti, sound, buzz, unlockAudio, keepAwake, setSound } from './fx.js';
 import {
   DAY_NAMES, DAY_LETTERS, dayKey, parseDay, weekStart, addDays, esc, fmtNum, fmtWeight,
@@ -68,14 +69,18 @@ function prescription(it) {
 }
 
 // ── Root render ────────────────────────────────────────────────────
+let lastScreen = '';
 function render() {
-  document.body.dataset.mode = !S ? 'onboard' : S.active && !ui.minimized ? 'workout' : ui.summary ? 'summary' : 'tabs';
+  const mode = !S ? 'onboard' : S.active && !ui.minimized ? 'workout' : ui.summary ? 'summary' : 'tabs';
+  document.body.dataset.mode = mode;
+  // Jump to the top when moving to a new screen or exercise, not on small updates.
+  const screen = mode === 'tabs' ? `tabs:${ui.tab}` : mode === 'workout' ? `workout:${S.active.idx}` : mode === 'onboard' ? `onboard:${ui.ob?.step}` : mode;
+  if (screen !== lastScreen) { lastScreen = screen; window.scrollTo(0, 0); }
   if (!S) return renderOnboarding();
   if (S.active && !ui.minimized) return renderWorkout();
   if (ui.summary) return renderSummary();
   renderTabs();
   ({ today: renderToday, plan: renderPlan, progress: renderProgress, medals: renderMedals })[ui.tab]();
-  $view.scrollTop = 0;
 }
 
 function renderTabs() {
@@ -223,12 +228,41 @@ function renderToday() {
       <div class="stat"><b>${streak ? '🔥 ' : ''}${streak}</b><span>Week streak</span></div>
       <div class="stat" data-act="tab" data-id="medals"><b>🏅 ${medalsEarned}</b><span>Medals</span></div>
     </div>
+    ${songCard()}
     <div class="card weigh">
       <div><h3>Weight check-in</h3><p class="muted">${loggedToday ? `Logged ${fmtWeight(lastW.lbs)} lb today ✓` : lastW ? `Last: ${fmtWeight(lastW.lbs)} lb · ${parseDay(lastW.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : 'Track your progress weekly'}</p></div>
       <button class="btn soft" data-act="weigh">${loggedToday ? 'Update' : 'Log weight'}</button>
     </div>
     ${tipCard()}
   `);
+}
+
+function songCard() {
+  const { song } = songOfDay(S);
+  const fav = S.music.favs.includes(songKey(song));
+  const nFav = S.music.favs.length;
+  return `<div class="card song">
+    <div class="song-top">
+      <div class="vinyl" aria-hidden="true"><i></i></div>
+      <div class="song-info"><p class="eyebrow">🎵 Song of the day</p><b>${esc(song[1])}</b><span>${esc(song[0])}</span></div>
+      <button class="heart ${fav ? 'on' : ''}" data-act="song-fav" aria-label="${fav ? 'Remove from' : 'Add to'} favorites" aria-pressed="${fav}">${fav ? '♥' : '♡'}</button>
+    </div>
+    <div class="song-btns">
+      <a class="btn spotify" href="${songUrl(song)}" target="_blank" rel="noopener" data-act="song-play">${icon.play} Play on Spotify</a>
+      <button class="btn soft" data-act="song-shuffle" aria-label="Pick a different song">🔀</button>
+    </div>
+    <div class="song-more">
+      <a href="${VAVO_URL}" target="_blank" rel="noopener" data-act="song-play">More VAVO remixes ›</a>
+      ${nFav ? `<button data-act="song-favs">♥ Favorites (${nFav})</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function songChip() {
+  const { song } = songOfDay(S);
+  return `<a class="song-chip" href="${songUrl(song)}" target="_blank" rel="noopener" data-act="song-play">
+    <span class="vinyl sm" aria-hidden="true"><i></i></span>
+    <span><small>Song of the day</small><b>${esc(song[1])}</b> · ${esc(song[0])}</span>${icon.play}</a>`;
 }
 
 function tipCard() {
@@ -367,6 +401,7 @@ function renderWorkout() {
       </header>
       <div class="wk-bar"><span style="width:${(done / total) * 100}%"></span></div>
       <div class="steps">${steps}</div>
+      ${a.idx === 0 && !a.items[0]?.logged.length ? songChip() : ''}
       ${main}
     </div>`);
   renderTimer();
@@ -845,6 +880,14 @@ function wireChartTips() {
   });
 }
 
+function openFavs() {
+  const songs = S.music.favs.map((k) => SONGS.find((s) => songKey(s) === k)).filter(Boolean);
+  openSheet(`<h2>Favorite songs ♥</h2><p class="muted">Tap a song to play it on Spotify.</p>
+    <div class="fav-list">${songs.map((s) => `
+      <div class="fav-row"><a href="${songUrl(s)}" target="_blank" rel="noopener" data-act="song-play"><b>${esc(s[1])}</b><span>${esc(s[0])}</span></a>
+      <button class="link-btn" data-act="song-unfav" data-k="${esc(songKey(s))}">Remove</button></div>`).join('')}</div>`);
+}
+
 function openWeigh() {
   const last = [...S.weights].sort((a, b) => (a.day < b.day ? -1 : 1)).pop();
   openSheet(`
@@ -1100,6 +1143,27 @@ const actions = {
   },
   'summary-done': () => { ui.summary = null; ui.tab = 'today'; render(); },
 
+  'song-play': () => {
+    // The link itself opens Spotify; this just counts today's play.
+    const today = dayKey();
+    if (S.music.played.includes(today)) return;
+    S.music.played.push(today);
+    if (S.music.played.length > 400) S.music.played.shift();
+    S.stats.songs++;
+    const medals = checkMedals(S);
+    persist();
+    if (medals.length) setTimeout(() => celebrate(medals), 800);
+  },
+  'song-shuffle': () => { shuffleSong(S); persist(); render(); },
+  'song-fav': () => {
+    const k = songKey(songOfDay(S).song);
+    const f = S.music.favs;
+    S.music.favs = f.includes(k) ? f.filter((x) => x !== k) : [...f, k];
+    persist(); render();
+    if (S.music.favs.includes(k)) toast('Added to favorites ♥');
+  },
+  'song-favs': () => openFavs(),
+  'song-unfav': ({ k }) => { S.music.favs = S.music.favs.filter((x) => x !== k); persist(); render(); S.music.favs.length ? openFavs() : closeSheet(); },
   weigh: openWeigh,
   'weigh-save': () => {
     const v = parseFloat(document.getElementById('w-in').value);
@@ -1148,7 +1212,9 @@ document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
   if (!el || el.disabled) return;
   const fn = actions[el.dataset.act];
-  if (fn) { e.preventDefault(); fn({ ...el.dataset }, el); }
+  if (!fn) return;
+  if (!(el.tagName === 'A' && el.getAttribute('href'))) e.preventDefault(); // let Spotify links open
+  fn({ ...el.dataset }, el);
 });
 
 document.addEventListener('keydown', (e) => {

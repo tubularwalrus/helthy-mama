@@ -66,6 +66,9 @@ export function medalList(state) {
     M('fin10', 'Cardio Queen', 'Finish 10 cardio finishers', '❤️', 'silver', s.finishers, 10),
     M('early', 'Early Bird', 'Work out before 8 am', '🌅', 'bronze', s.early ? 1 : 0, 1),
     M('late', 'Night Owl', 'Work out after 8 pm', '🌙', 'bronze', s.late ? 1 : 0, 1),
+    M('song1', 'Press Play', 'Play your first Song of the Day', '🎵', 'bronze', s.songs, 1),
+    M('song10', 'Dance Floor Ready', 'Play 10 Songs of the Day', '🎧', 'silver', s.songs, 10),
+    M('song30', 'Main Character', 'Play 30 Songs of the Day', '🪩', 'gold', s.songs, 30),
   ];
 }
 

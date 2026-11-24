@@ -39,6 +39,8 @@ function migrate(s) {
   s.stats.finishers ??= 0;
   s.stats.perfect ??= 0;
   s.stats.bestPlank ??= 0;
+  s.stats.songs ??= 0;
+  s.music ??= { day: null, idx: -1, favs: [], played: [] };
   s.settings ??= { sound: true };
   s.settings.sets ??= 3;
   s.settings.dbJump ??= 2;

@@ -1,9 +1,9 @@
 // Offline support: cache the app shell, serve it cache-first, refresh in the background.
-const CACHE = 'momentum-v3';
+const CACHE = 'momentum-v4';
 const ASSETS = [
   './', './index.html', './manifest.webmanifest', './css/styles.css',
   './js/app.js', './js/exercises.js', './js/figure.js', './js/program.js', './js/medals.js',
-  './js/store.js', './js/util.js', './js/fx.js',
+  './js/store.js', './js/util.js', './js/fx.js', './js/songs.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 

@@ -445,7 +445,7 @@ body[data-mode="workout"] #view, body[data-mode="summary"] #view, body[data-mode
 .gain { font-style: normal; font-size: 13px; font-weight: 800; color: var(--good); flex: none; }
 
 /* ── Misc ── */
-.toast { position: fixed; left: 50%; bottom: calc(96px + var(--safe-b)); transform: translate(-50%, 20px); opacity: 0; z-index: 90; background: var(--ink); color: var(--bg); font-weight: 700; padding: 12px 18px; border-radius: 999px; transition: all 0.25s; }
+.toast { white-space: nowrap; position: fixed; left: 50%; bottom: calc(96px + var(--safe-b)); transform: translate(-50%, 20px); opacity: 0; z-index: 90; background: var(--ink); color: var(--bg); font-weight: 700; padding: 12px 18px; border-radius: 999px; transition: all 0.25s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 100; pointer-events: none; }
 
@@ -474,3 +474,33 @@ body[data-mode="workout"] #view, body[data-mode="summary"] #view, body[data-mode
 .stepper .w-tap { flex: 1; width: auto; height: auto; background: none; color: inherit; font-size: inherit; display: flex; flex-direction: column; align-items: center; line-height: 1.1; border-radius: 12px; padding: 2px 0; }
 .stepper .w-tap:active { background: var(--bg-2); }
 .len-pick.four { grid-template-columns: repeat(4, 1fr); }
+
+/* Song of the day */
+.card.song { background: linear-gradient(135deg, #2b1840 0%, #5b2056 60%, #8a2c5c 100%); color: #fff; }
+.song-top { display: flex; align-items: center; gap: 14px; }
+.song-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.song-info .eyebrow { color: #ffb3c6; }
+.song-info b { font-size: 19px; line-height: 1.2; }
+.song-info span { color: rgba(255, 255, 255, 0.75); font-size: 14px; }
+.vinyl { width: 58px; height: 58px; flex: none; border-radius: 50%; display: grid; place-items: center;
+  background: repeating-radial-gradient(circle, #111 0 2px, #222 2px 4px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4); animation: spin 4s linear infinite; }
+.vinyl i { width: 20px; height: 20px; border-radius: 50%; background: var(--grad); box-shadow: inset 0 0 0 7px #ff8a4c; }
+.vinyl.sm { width: 34px; height: 34px; }
+.vinyl.sm i { width: 12px; height: 12px; box-shadow: none; }
+.heart { font-size: 28px; color: rgba(255, 255, 255, 0.7); width: 40px; height: 40px; flex: none; }
+.heart.on { color: #ff5c8a; }
+.song-btns { display: flex; gap: 10px; margin-top: 14px; }
+.btn.spotify { flex: 1; background: #1ed760; color: #000; text-decoration: none; }
+.btn.spotify svg { fill: #000; }
+.song-btns .btn.soft { background: rgba(255, 255, 255, 0.15); color: #fff; padding: 12px 16px; font-size: 18px; }
+.song-more { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 14px; font-weight: 700; }
+.song-more a, .song-more button { color: #ffb3c6; text-decoration: none; }
+.song-chip { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 14px 8px 8px; border-radius: 999px;
+  background: linear-gradient(135deg, #2b1840, #6b2547); color: #fff; text-decoration: none; font-size: 14px; }
+.song-chip > span:nth-child(2) { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-chip small { display: block; font-size: 11px; font-weight: 700; color: #ffb3c6; text-transform: uppercase; letter-spacing: 0.05em; }
+.song-chip > svg { width: 22px; height: 22px; fill: #1ed760; flex: none; }
+.fav-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.fav-row { display: flex; align-items: center; gap: 10px; background: var(--card); border-radius: 16px; padding: 12px 14px; box-shadow: var(--shadow); }
+.fav-row a { flex: 1; display: flex; flex-direction: column; color: inherit; text-decoration: none; }
+.fav-row a span { font-size: 13px; color: var(--ink-2); }
