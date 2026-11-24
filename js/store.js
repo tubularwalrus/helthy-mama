@@ -41,6 +41,7 @@ function migrate(s) {
   s.stats.bestPlank ??= 0;
   s.settings ??= { sound: true };
   s.settings.sets ??= 3;
+  s.settings.dbJump ??= 2;
   s.active ??= null;
   return s;
 }

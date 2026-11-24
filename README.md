@@ -22,6 +22,7 @@ All data stays on the phone, in the app's own storage. Use **Settings → Export
   - Slightly short (≥85% of target reps) → same goal again.
   - Short by more (≥70%, e.g. 8 of 10) → same weight, a realistic rep goal (9).
   - Short twice in a row, or well short → weight drops one step so she can build back up.
+- **Flexible weights**: dumbbell +/− buttons move 1 lb at a time, and tapping the weight lets her type any exact weight. Automatic dumbbell increases default to +2 lb (Settings → Dumbbell weight jumps: 1, 2, 2.5 or 5 lb). Machines and barbells still move in 5–10 lb steps.
 - **Guided workout flow**: animated demo, set-by-set logging with weight/rep steppers, and an automatic rest timer (±15s, skip) with beeps in the last 3 seconds. Timed holds (plank) and work/rest interval finishers are timed for her. Keeps the screen awake during a workout.
 - **Medals**: 30 achievements across workouts, weekly streaks, personal records, weight increases, total pounds lifted and weight loss. Unlocking one plays a full-screen animation with confetti and a chime.
 - **Progress**: weight trend chart with a goal line, workouts per week, and a strength trend per exercise.

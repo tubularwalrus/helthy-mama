@@ -3,7 +3,7 @@ import { EXERCISES, TEMPLATES, LENGTHS } from './exercises.js';
 import { createFigure } from './figure.js';
 import { load, save, fresh, clear, exportJSON, importJSON } from './store.js';
 import {
-  exState, defaultSets, buildWorkout, estimateMinutes, nextTemplateId, weekPlan, sessionsInWeek,
+  exState, defaultSets, weightTap, buildWorkout, estimateMinutes, nextTemplateId, weekPlan, sessionsInWeek,
   weekStreak, progress, progressFinisher, volumeOf,
 } from './program.js';
 import { medalList, checkMedals } from './medals.js';
@@ -382,7 +382,7 @@ function renderSetView(it) {
 
   const weightStep = ex.kind === 'weight' ? `
     <div class="stepper"><button data-act="adj" data-f="w" data-v="-1" aria-label="Less weight">−</button>
-      <div><b>${fmtWeight(d.w)}</b><span>lb${ex.perHand ? ' each' : ''}</span></div>
+      <button class="w-tap" data-act="w-type" aria-label="Type a weight"><b>${fmtWeight(d.w)}</b><span>lb${ex.perHand ? ' each' : ''} ✎</span></button>
       <button data-act="adj" data-f="w" data-v="1" aria-label="More weight">+</button></div>` : '';
   const repStep = `
     <div class="stepper"><button data-act="adj" data-f="r" data-v="-1" aria-label="Fewer">−</button>
@@ -862,7 +862,7 @@ function openWeigh() {
 // ── Settings ───────────────────────────────────────────────────────
 function openSettings() {
   const p = S.profile;
-  ui.edit = { days: [...p.days], length: p.length, sets: S.settings.sets };
+  ui.edit = { days: [...p.days], length: p.length, sets: S.settings.sets, dbJump: S.settings.dbJump };
   openSheet(settingsHTML());
 }
 
@@ -878,6 +878,9 @@ function settingsHTML() {
     <div class="field"><span>Sets per exercise</span><div class="len-pick sm two">${[2, 3].map((k) =>
       `<button class="len-opt ${e.sets === k ? 'on' : ''}" data-act="s-sets" data-k="${k}"><b>${k}</b><span>sets</span></button>`).join('')}</div>
       <p class="muted small hint">Your default. You can switch between 2 and 3 for any exercise during a workout.</p></div>
+    <div class="field"><span>Dumbbell weight jumps</span><div class="len-pick sm four">${[1, 2, 2.5, 5].map((k) =>
+      `<button class="len-opt ${e.dbJump === k ? 'on' : ''}" data-act="s-jump" data-k="${k}"><b>${k}</b><span>lb</span></button>`).join('')}</div>
+      <p class="muted small hint">How much the plan adds when you’re ready for heavier dumbbells. Pick what your gym’s dumbbells go up by.</p></div>
     <label class="field"><span>Starting weight</span><div class="suffix"><input id="s-start" class="input" type="number" inputmode="decimal" value="${p.startWeight || ''}"><em>lb</em></div></label>
     <label class="field"><span>Goal weight</span><div class="suffix"><input id="s-goal" class="input" type="number" inputmode="decimal" value="${p.goalWeight || ''}"><em>lb</em></div></label>
     <label class="toggle"><input id="s-sound" type="checkbox" ${S.settings.sound ? 'checked' : ''}><span>Sounds</span></label>
@@ -1032,7 +1035,7 @@ const actions = {
     const it = curItem(); if (!it) return;
     const ex = EXERCISES[it.id];
     const d = draftFor(it);
-    if (f === 'w') d.w = Math.max(0, Math.round((d.w + (+v) * ex.inc) * 10) / 10);
+    if (f === 'w') d.w = Math.max(0, Math.round((d.w + (+v) * weightTap(ex)) * 10) / 10);
     else d.r = Math.max(ex.kind === 'time' ? 5 : 0, d.r + (+v) * (ex.kind === 'time' ? 5 : 1));
     persist();
     // Update just the numbers to keep the animation smooth.
@@ -1043,6 +1046,22 @@ const actions = {
     if (btn) btn.innerHTML = `${icon.play} Start ${d.r}s hold`;
   },
   log: () => { unlockAudio(); logSet(); },
+  'w-type': () => {
+    const it = curItem(); if (!it) return;
+    const ex = EXERCISES[it.id];
+    openSheet(`<h2>Enter weight</h2>
+      <p class="muted">${ex.name}${ex.perHand ? ' — weight of one dumbbell' : ''}</p>
+      <label class="field"><span>Weight</span><div class="suffix"><input id="w-exact" class="input big" type="number" inputmode="decimal" step="0.5" min="0" value="${draftFor(it).w}"><em>lb</em></div></label>
+      <button class="btn primary big" data-act="w-exact-save">Use this weight</button>`);
+    setTimeout(() => { const i = document.getElementById('w-exact'); i?.focus(); i?.select(); }, 300);
+  },
+  'w-exact-save': () => {
+    const it = curItem(); if (!it) return;
+    const v = parseFloat(document.getElementById('w-exact').value);
+    if (!(v >= 0 && v < 1000)) { toast('Enter a weight in lb'); return; }
+    draftFor(it).w = Math.round(v * 10) / 10;
+    persist(); closeSheet(); render();
+  },
   'hold-start': () => {
     unlockAudio();
     const it = curItem(); const d = draftFor(it);
@@ -1102,6 +1121,7 @@ const actions = {
   },
   's-len': ({ m }) => { ui.edit.length = +m; refreshSheet(settingsHTML()); },
   's-sets': ({ k }) => { ui.edit.sets = +k; refreshSheet(settingsHTML()); },
+  's-jump': ({ k }) => { ui.edit.dbJump = +k; refreshSheet(settingsHTML()); },
   's-save': () => {
     const p = S.profile;
     p.name = document.getElementById('s-name').value.trim() || p.name;
@@ -1109,6 +1129,7 @@ const actions = {
     p.days = ui.edit.days.sort();
     p.length = ui.edit.length;
     S.settings.sets = ui.edit.sets;
+    S.settings.dbJump = ui.edit.dbJump;
     const sw = parseFloat(document.getElementById('s-start').value);
     const gw = parseFloat(document.getElementById('s-goal').value);
     p.startWeight = sw > 0 ? sw : null;

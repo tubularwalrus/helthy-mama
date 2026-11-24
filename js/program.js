@@ -138,7 +138,19 @@ export function completeWeeks(state) {
 }
 
 // ── Progression ────────────────────────────────────────────────────
-const roundTo = (w, inc) => Math.round(w / inc) * inc;
+const half = (w) => Math.round(w * 2) / 2;
+
+export const isDumbbell = (ex) => /dumbbell/i.test(ex.equip);
+
+/** How much weight goes up (or down) when the plan adjusts it automatically. */
+export function weightJump(state, ex) {
+  return isDumbbell(ex) ? state.settings?.dbJump ?? 2 : ex.inc;
+}
+
+/** How much one tap of the +/− weight button changes the weight. */
+export function weightTap(ex) {
+  return isDumbbell(ex) ? 1 : ex.inc;
+}
 
 /**
  * Decide what she should do next time, based on how this exercise went.
@@ -181,11 +193,12 @@ export function progress(state, item) {
   const step = ex.kind === 'time' ? 5 : 1;
 
   if (ex.kind === 'weight') {
+    const jump = weightJump(state, ex);
     st.weight = usedW; // respect what she actually lifted
     if (allHit && !hard) {
       st.strikes = 0;
       if (target >= ex.max || (easy && avg >= ex.max - 1)) {
-        st.weight = roundTo(usedW + ex.inc * (easy && avg >= ex.max ? 2 : 1), ex.inc);
+        st.weight = half(usedW + jump * (easy && avg >= ex.max ? 2 : 1));
         st.target = ex.min;
         change = 'up';
         msg = `Weight up! ${fmtW(st.weight)} lb × ${st.target}`;
@@ -209,8 +222,7 @@ export function progress(state, item) {
       msg = `Adjusted: ${fmtW(st.weight)} lb × ${st.target} next time`;
     } else {
       st.strikes = 0;
-      const floor = ex.inc;
-      st.weight = Math.max(floor, roundTo(usedW - ex.inc, ex.inc));
+      st.weight = Math.max(jump, half(usedW - jump));
       st.target = ex.min;
       change = st.weight < usedW ? 'down' : 'adjust';
       msg = st.weight < usedW
