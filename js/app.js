@@ -7,7 +7,7 @@ import {
   weekStreak, progress, progressFinisher, volumeOf,
 } from './program.js';
 import { medalList, checkMedals } from './medals.js';
-import { SONGS, songKey, songUrl, songOfDay, shuffleSong, VAVO_URL } from './songs.js';
+import { songKey, songUrl, songOfDay, shuffleSong, songFromKey, isNew, VAVO_URL } from './songs.js';
 import { confetti, sound, buzz, unlockAudio, keepAwake, setSound } from './fx.js';
 import {
   DAY_NAMES, DAY_LETTERS, dayKey, parseDay, weekStart, addDays, esc, fmtNum, fmtWeight,
@@ -244,7 +244,7 @@ function songCard() {
   return `<div class="card song">
     <div class="song-top">
       <div class="vinyl" aria-hidden="true"><i></i></div>
-      <div class="song-info"><p class="eyebrow">🎵 Song of the day</p><b>${esc(song[1])}</b><span>${esc(song[0])}</span></div>
+      <div class="song-info"><p class="eyebrow">🎵 Song of the day${isNew(song) ? ' <em class="new-tag">NEW</em>' : ''}</p><b>${esc(song[1])}</b><span>${esc(song[0])}</span></div>
       <button class="heart ${fav ? 'on' : ''}" data-act="song-fav" aria-label="${fav ? 'Remove from' : 'Add to'} favorites" aria-pressed="${fav}">${fav ? '♥' : '♡'}</button>
     </div>
     <div class="song-btns">
@@ -881,11 +881,11 @@ function wireChartTips() {
 }
 
 function openFavs() {
-  const songs = S.music.favs.map((k) => SONGS.find((s) => songKey(s) === k)).filter(Boolean);
+  const songs = S.music.favs.map(songFromKey);
   openSheet(`<h2>Favorite songs ♥</h2><p class="muted">Tap a song to play it on Spotify.</p>
     <div class="fav-list">${songs.map((s) => `
       <div class="fav-row"><a href="${songUrl(s)}" target="_blank" rel="noopener" data-act="song-play"><b>${esc(s[1])}</b><span>${esc(s[0])}</span></a>
-      <button class="link-btn" data-act="song-unfav" data-k="${esc(songKey(s))}">Remove</button></div>`).join('')}</div>`);
+      <button class="link-btn" data-act="song-unfav" data-k="${esc(`${s[0]} — ${s[1]}`)}">Remove</button></div>`).join('')}</div>`);
 }
 
 function openWeigh() {
